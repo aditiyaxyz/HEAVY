@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, User, X, ArrowRight, Music, Volume2, VolumeX, Loader } from 'lucide-react';
-import { auth, loginWithGoogle, logout, addToWaitlist } from './firebase'; // Import backend logic
+import { ShoppingBag, User, X, Music, Volume2, VolumeX, ArrowRight } from 'lucide-react';
 
-// --- MUSIC CONFIG ---
-const VIBE_TRACK = "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3"; // Royalty Free Lo-Fi
+// --- CONFIGURATION ---
+// PASTE YOUR GOOGLE WEB APP URL INSIDE THE QUOTES BELOW:
+const GOOGLE_SCRIPT_URL = "PASTE_YOUR_URL_HERE"; 
+
+const VIBE_TRACK = "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3";
 const TRACK_NAME = "MIDNIGHT IN TOKYO - LOFI";
 
 // --- PRODUCT DATA ---
@@ -17,18 +19,17 @@ const PRODUCTS = [
 
 // --- COMPONENTS ---
 
-const Navbar = ({ cartCount, toggleCart, user, handleLogin, handleLogout }) => (
+const Navbar = ({ cartCount, toggleCart, user, openProfile }) => (
   <nav className="fixed top-0 w-full z-50 flex justify-between items-center p-6 bg-black/80 backdrop-blur-md border-b border-gray-900 text-white">
     <div className="text-2xl font-['Anton'] tracking-wider cursor-pointer text-red-600">HEAVY SHIT.</div>
     <div className="flex items-center gap-6 font-['Space_Grotesk']">
       {user ? (
-        <div className="flex items-center gap-4">
-          <span className="hidden md:block text-xs uppercase tracking-widest text-green-400">Hi, {user.displayName.split(' ')[0]}</span>
-          <button onClick={handleLogout} className="text-xs border border-gray-700 px-2 py-1 hover:bg-white hover:text-black transition-colors">LOGOUT</button>
-        </div>
+        <button onClick={openProfile} className="flex items-center gap-2 text-xs uppercase tracking-widest text-green-400 hover:text-white transition-colors">
+          <User size={16} /> {user.Name}
+        </button>
       ) : (
-        <button onClick={handleLogin} className="flex items-center gap-2 hover:text-red-500 transition-colors text-sm uppercase tracking-widest">
-          <User size={18} /> Login
+        <button onClick={openProfile} className="flex items-center gap-2 hover:text-red-500 transition-colors text-sm uppercase tracking-widest">
+          <User size={18} /> JOIN / LOGIN
         </button>
       )}
       <button onClick={toggleCart} className="relative hover:text-red-500 transition-colors">
@@ -44,7 +45,7 @@ const MusicPlayer = () => {
   const audioRef = useRef(new Audio(VIBE_TRACK));
 
   useEffect(() => {
-    audioRef.current.volume = 0.15; // 15% Volume
+    audioRef.current.volume = 0.15;
     audioRef.current.loop = true;
     return () => { audioRef.current.pause(); };
   }, []);
@@ -68,21 +69,43 @@ const MusicPlayer = () => {
   );
 };
 
-const WaitlistModal = ({ isOpen, onClose }) => {
+const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', size: 'M', instagram: '' });
+  const [formData, setFormData] = useState({ Name: '', Email: '', Phone: '', Size: 'M', Instagram: '' });
+
+  // Load existing data if user exists
+  useEffect(() => {
+    if (user) setFormData(user);
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const success = await addToWaitlist(formData);
-    setLoading(false);
-    if (success) {
-      alert("YOU'RE ON THE LIST. WATCH YOUR SIX.");
-      onClose();
-    } else {
-      alert("ERROR. TRY AGAIN.");
+
+    // 1. Send to Google Sheet
+    if (GOOGLE_SCRIPT_URL !== "PASTE_YOUR_URL_HERE") {
+      try {
+        const formBody = new FormData();
+        Object.keys(formData).forEach(key => formBody.append(key, formData[key]));
+        await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: formBody });
+      } catch (err) {
+        console.error("Sheet Error", err);
+      }
     }
+
+    // 2. Save to Local Storage (The "Profile")
+    localStorage.setItem('heavy_user', JSON.stringify(formData));
+    setUser(formData);
+    
+    setLoading(false);
+    alert("PROFILE UPDATED. YOU ARE ON THE LIST.");
+    onClose();
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('heavy_user');
+    setUser(null);
+    onClose();
   };
 
   return (
@@ -92,28 +115,34 @@ const WaitlistModal = ({ isOpen, onClose }) => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.8 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black" />
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#111] border border-gray-800 p-8 w-full max-w-md relative z-10">
             <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X size={24} /></button>
-            <h2 className="text-3xl font-['Anton'] text-white uppercase mb-2">Secure The Drop</h2>
-            <p className="text-gray-400 font-['Space_Grotesk'] text-sm mb-6">Register now. Limited quantity available on launch.</p>
+            <h2 className="text-3xl font-['Anton'] text-white uppercase mb-2">Identify Yourself</h2>
+            <p className="text-gray-400 font-['Space_Grotesk'] text-sm mb-6">Join the unit. Get drop access.</p>
             
             <form onSubmit={handleSubmit} className="space-y-4 font-['Space_Grotesk']">
-              <input required placeholder="FULL NAME" className="w-full bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, name: e.target.value})} />
-              <input required type="email" placeholder="EMAIL ADDRESS" className="w-full bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, email: e.target.value})} />
-              <input required type="tel" placeholder="PHONE NUMBER" className="w-full bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, phone: e.target.value})} />
+              <input required placeholder="FULL NAME" value={formData.Name} className="w-full bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, Name: e.target.value})} />
+              <input required type="email" placeholder="EMAIL ADDRESS" value={formData.Email} className="w-full bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, Email: e.target.value})} />
+              <input required type="tel" placeholder="PHONE NUMBER" value={formData.Phone} className="w-full bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, Phone: e.target.value})} />
               
               <div className="flex gap-2">
-                <select className="w-1/3 bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, size: e.target.value})}>
+                <select value={formData.Size} className="w-1/3 bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, Size: e.target.value})}>
                   <option value="S">Size S</option>
                   <option value="M">Size M</option>
                   <option value="L">Size L</option>
                   <option value="XL">Size XL</option>
                 </select>
-                <input placeholder="INSTAGRAM (OPTIONAL)" className="w-2/3 bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, instagram: e.target.value})} />
+                <input placeholder="INSTAGRAM (OPTIONAL)" value={formData.Instagram} className="w-2/3 bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, Instagram: e.target.value})} />
               </div>
 
               <button disabled={loading} className="w-full bg-red-600 text-white font-['Anton'] py-4 text-xl hover:bg-white hover:text-black transition-colors uppercase tracking-widest mt-4">
-                {loading ? "PROCESSING..." : "REGISTER INTEREST"}
+                {loading ? "SAVING..." : "CONFIRM PROFILE"}
               </button>
             </form>
+            
+            {user && (
+              <button onClick={handleLogout} className="w-full mt-4 text-xs text-gray-500 underline hover:text-red-500 uppercase">
+                Sign Out / Clear Data
+              </button>
+            )}
           </motion.div>
         </div>
       )}
@@ -125,34 +154,35 @@ const WaitlistModal = ({ isOpen, onClose }) => {
 
 export default function HeavyShitApp() {
   const [cartOpen, setCartOpen] = useState(false);
-  const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [cart, setCart] = useState([]);
   const [user, setUser] = useState(null);
 
+  // Load User from Local Storage on Start
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((u) => setUser(u));
-    return () => unsubscribe();
+    const savedUser = localStorage.getItem('heavy_user');
+    if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
-  const handleLogin = async () => { await loginWithGoogle(); };
-  const handleLogout = async () => { await logout(); };
+  const addToCart = (product) => {
+    setCart([...cart, product]);
+    setCartOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white pb-20 overflow-x-hidden">
-      <Navbar cartCount={cart.length} toggleCart={() => setCartOpen(!cartOpen)} user={user} handleLogin={handleLogin} handleLogout={handleLogout} />
+      <Navbar cartCount={cart.length} toggleCart={() => setCartOpen(!cartOpen)} user={user} openProfile={() => setProfileOpen(true)} />
       <MusicPlayer />
-      <WaitlistModal isOpen={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
+      <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} user={user} setUser={setUser} />
 
-      {/* Cart Sidebar Logic (Simplified for brevity - same as before) */}
-      
       {/* HERO */}
       <div className="h-[70vh] flex flex-col justify-center items-center relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20"></div>
         <motion.h1 initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-7xl md:text-[10rem] font-['Anton'] uppercase text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-900 leading-none z-10">
           NEXT DROP
         </motion.h1>
-        <button onClick={() => setWaitlistOpen(true)} className="z-10 mt-8 border border-white px-8 py-3 font-['Space_Grotesk'] tracking-[0.3em] hover:bg-white hover:text-black transition-all uppercase text-sm">
-          Join the Waitlist
+        <button onClick={() => setProfileOpen(true)} className="z-10 mt-8 border border-white px-8 py-3 font-['Space_Grotesk'] tracking-[0.3em] hover:bg-white hover:text-black transition-all uppercase text-sm">
+          {user ? "PROFILE ACTIVE" : "JOIN THE WAITLIST"}
         </button>
       </div>
 
@@ -168,7 +198,7 @@ export default function HeavyShitApp() {
               <h3 className="font-['Anton'] text-lg">{p.name}</h3>
               <div className="flex justify-between items-center mt-2">
                 <span className="font-['Space_Grotesk']">${p.price}</span>
-                {p.status === 'AVAILABLE' && <button onClick={() => setCart([...cart, p])} className="text-xs text-red-500 font-bold uppercase hover:text-white">Add +</button>}
+                {p.status === 'AVAILABLE' && <button onClick={() => addToCart(p)} className="text-xs text-red-500 font-bold uppercase hover:text-white">Add +</button>}
               </div>
             </div>
           </div>
