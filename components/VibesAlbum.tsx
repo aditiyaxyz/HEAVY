@@ -4,22 +4,26 @@ export default function VibesAlbum() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const handleClick = () => {
+  const togglePlay = async () => {
     if (!audioRef.current) return;
-
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+    try {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        await audioRef.current.play();
+        setIsPlaying(true);
+      }
+    } catch {
+      // Optional: toast or UI hint on play failure
     }
   };
 
   return (
     <>
-      <div
-        onClick={handleClick}
+      <button
+        onClick={togglePlay}
+        aria-label={isPlaying ? "Pause vibes" : "Play vibes"}
         style={{
           position: "fixed",
           bottom: "20px",
@@ -29,6 +33,7 @@ export default function VibesAlbum() {
           borderRadius: "50%",
           background: "rgba(255, 255, 255, 0.2)",
           backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -36,14 +41,18 @@ export default function VibesAlbum() {
           fontSize: "20px",
           color: "#fff",
           cursor: "pointer",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-          transition: "transform 0.2s ease",
+          border: "1px solid rgba(255,255,255,0.25)",
+          boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+          transition: "transform 0.15s ease, box-shadow 0.15s ease",
+          zIndex: 1000,
         }}
-        onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.95)")}
+        onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.96)")}
         onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+        onTouchStart={(e) => (e.currentTarget.style.transform = "scale(0.96)")}
+        onTouchEnd={(e) => (e.currentTarget.style.transform = "scale(1)")}
       >
         {isPlaying ? "PAUSE" : "VIBES"}
-      </div>
+      </button>
 
       <audio ref={audioRef} src="/heavy_loop.mp3" preload="auto" loop />
     </>
