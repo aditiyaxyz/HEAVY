@@ -9,6 +9,7 @@ export default function HeaderNav() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    // Check auth token on mount
     const token = localStorage.getItem("authToken");
     setIsLoggedIn(!!token);
   }, []);
@@ -20,16 +21,16 @@ export default function HeaderNav() {
   };
 
   return (
-    <nav className="flex items-center justify-between px-6 py-4 bg-black text-white">
+    <nav className="flex items-center justify-between px-6 py-4 bg-black text-white shadow-md">
       {/* Left side */}
       <div className="flex items-center space-x-6">
-        <Link href="/" className="font-bold text-xl tracking-wide">
+        <Link href="/" className="font-bold text-xl tracking-wide hover:text-gray-300 transition-colors">
           HEAVY
         </Link>
-        <Link href="/about" className="hover:text-gray-300 transition-colors duration-300">
+        <Link href="/about" className="hover:text-gray-300 transition-colors">
           About
         </Link>
-        <Link href="/contact" className="hover:text-gray-300 transition-colors duration-300">
+        <Link href="/contact" className="hover:text-gray-300 transition-colors">
           Contact
         </Link>
       </div>
@@ -38,10 +39,16 @@ export default function HeaderNav() {
       <div className="flex items-center space-x-4 relative">
         {!isLoggedIn ? (
           <>
-            <Link href="/signin" className="hover:text-gray-300 transition-colors duration-300">
+            <Link
+              href="/signin"
+              className="px-3 py-1 rounded hover:bg-gray-800 transition-colors duration-300"
+            >
               Sign In
             </Link>
-            <Link href="/signup" className="hover:text-gray-300 transition-colors duration-300">
+            <Link
+              href="/signup"
+              className="px-3 py-1 rounded hover:bg-gray-800 transition-colors duration-300"
+            >
               Sign Up
             </Link>
           </>
