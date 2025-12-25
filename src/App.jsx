@@ -213,7 +213,7 @@ export default function HeavyShitApp() {
                      <img src={item.image} className="w-16 h-16 object-cover" />
                      <div>
                        <h4 className="font-bold">{item.name}</h4>
-                       <p className="text-gray-400">${item.price}</p>
+                       <p className="text-gray-400">₹{item.price}</p>
                      </div>
                    </div>
                  ))}
@@ -267,13 +267,13 @@ export default function HeavyShitApp() {
           {INITIAL_PRODUCTS.map(p => (
             <motion.div variants={itemVars} key={p.id} className="bg-[#111] border border-gray-900 group relative hover:border-red-900 transition-colors duration-500">
               <div className="aspect-[3/4] overflow-hidden relative">
-                <img src={p.image} className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${p.status === 'SOLD OUT' ? 'grayscale opacity-40' : 'grayscale group-hover:grayscale-0'}`} />
+                <img src={p.image} className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ₹{p.status === 'SOLD OUT' ? 'grayscale opacity-40' : 'grayscale group-hover:grayscale-0'}`} />
                 {p.status === 'SOLD OUT' && <div className="absolute inset-0 flex items-center justify-center"><div className="bg-red-600 text-white font-['Anton'] text-xl px-4 py-1 -rotate-12">SOLD OUT</div></div>}
               </div>
               <div className="p-4 relative z-10 bg-[#111]">
                 <div className="flex justify-between items-start mb-2">
                     <h3 className="font-['Anton'] text-xl tracking-wide">{p.name}</h3>
-                    <span className="font-['Space_Grotesk'] text-sm text-gray-400">${p.price}</span>
+                    <span className="font-['Space_Grotesk'] text-sm text-gray-400">₹{p.price}</span>
                 </div>
                 {p.status === 'AVAILABLE' ? (
                   <button onClick={() => setCart([...cart, p])} className="w-full mt-2 border border-white/20 py-3 text-xs uppercase hover:bg-white hover:text-black transition-colors font-bold tracking-widest">Add to Cart</button>
