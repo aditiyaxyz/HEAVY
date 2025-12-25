@@ -2,54 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom Scrollbar for that raw feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #dc2626; /* Red-600 */
+}
+
 body {
   background-color: black;
+  color: white;
   margin: 0;
   padding: 0;
-}
-#player {
-    margin-top: 20px;
-    text-align: center;
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
-#albumArt {
-    width: 200px;
-    height: 200px;
-    border-radius: 10px;
-    object-fit: cover;
-    margin-bottom: 15px;
+/* Custom Animation Classes */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-100%); }
 }
-
-#playBtn, #pauseBtn {
-    padding: 10px 20px;
-    background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-right: 10px;
-    transition: transform 0.2s;
-}
-
-#playBtn:hover, #pauseBtn:hover {
-    transform: scale(1.05);
-}
-
-#volumeControl {
-    vertical-align: middle;
-    width: 100px;
-    cursor: pointer;
-}
-
-.demo-note {
-    font-size: 12px;
-    color: #666;
-    margin-top: 5px;
-    font-style: italic;
-}
-
-.error {
-    color: #ff6b6b;
-    margin-top: 10px;
-    font-size: 14px;
+.animate-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee 10s linear infinite;
 }
