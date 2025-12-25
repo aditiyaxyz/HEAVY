@@ -4,7 +4,7 @@ import { ShoppingBag, User, X, Music, Volume2, VolumeX, ArrowRight } from 'lucid
 
 // --- CONFIGURATION ---
 // PASTE YOUR GOOGLE WEB APP URL INSIDE THE QUOTES BELOW:
-const GOOGLE_SCRIPT_URL = "PASTE_YOUR_URL_HERE"; 
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFjUlTcRoGAcjdeo8jyA-7NOIKVPYud_Kl-K5Zes8-0cU4kCThJktIfPRjongpQJ3ARQ/exec"; 
 
 const VIBE_TRACK = "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3";
 const TRACK_NAME = "MIDNIGHT IN TOKYO - LOFI";
