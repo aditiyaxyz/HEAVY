@@ -4,7 +4,7 @@ import { ShoppingBag, User, X, Play, Pause, SkipForward, Radio, ArrowRight } fro
 
 // --- CONFIGURATION ---
 // ⚠️ PASTE YOUR GOOGLE WEB APP URL INSIDE THE QUOTES BELOW:
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaMj1WFKYvx8urHdlOpWzvyuP4AOB5QeHoRwjXAB6-YzxVrvH6Js73T7X2H7QSnF4/exec"; 
+const GOOGLE_SCRIPT_URL = "PASTE_YOUR_URL_HERE"; 
 
 // --- RADIO STATION CONFIG ---
 const RADIO_PLAYLIST = [
@@ -104,7 +104,7 @@ const RadioPlayer = () => {
 
 const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ Name: '', Email: '', Phone: '', Size: 'M' });
+  const [formData, setFormData] = useState({ Name: '', Email: '', Phone: '' });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -123,7 +123,6 @@ const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
         });
       } catch (err) {
         console.error("Sheet Error", err);
-        // We continue anyway so the user doesn't feel it broke
       }
     }
 
@@ -153,15 +152,6 @@ const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
               <input required placeholder="FULL NAME" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Name: e.target.value})} />
               <input required type="email" placeholder="EMAIL" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Email: e.target.value})} />
               <input required type="tel" placeholder="PHONE" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Phone: e.target.value})} />
-              <div className="flex gap-4">
-                 <select className="w-1/3 bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, Size: e.target.value})}>
-                   <option value="S">SIZE S</option>
-                   <option value="M">SIZE M</option>
-                   <option value="L">SIZE L</option>
-                   <option value="XL">SIZE XL</option>
-                 </select>
-                 <div className="w-2/3 flex items-center justify-center text-gray-500 text-xs uppercase border border-gray-800">No Payment Required Yet</div>
-              </div>
               <button disabled={loading} className="w-full bg-red-600 text-white font-['Anton'] py-4 text-xl hover:bg-white hover:text-black transition-colors uppercase tracking-widest">
                 {loading ? "SAVING..." : "CONFIRM PROFILE"}
               </button>
@@ -229,7 +219,7 @@ export default function HeavyShitApp() {
 
         <div className="flex-1 space-y-6 text-center md:text-left z-10 mt-20 md:mt-0">
           <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} className="inline-block border border-red-600 text-red-600 px-4 py-1 font-['Space_Grotesk'] text-xs tracking-[0.3em] uppercase">
-            Start a cult
+            OFFICIAL RELEASE CHANNEL
           </motion.div>
           <motion.h1 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: "spring" }} className="text-6xl md:text-9xl font-['Anton'] uppercase leading-none tracking-tighter">
             HEAVY<br/><span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-600">SHIT.</span>
@@ -240,7 +230,7 @@ export default function HeavyShitApp() {
             className="group relative bg-white text-black px-12 py-5 font-['Anton'] text-2xl tracking-widest uppercase hover:bg-red-600 hover:text-white transition-all duration-300 skew-x-[-10deg]"
           >
             <span className="skew-x-[10deg] inline-block flex items-center gap-2">
-              {user ? "ACCESS GRANTED" : "ENTER THE VOID"} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+              {user ? "ACCESS GRANTED" : "REGISTER FOR DROP"} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
             </span>
           </motion.button>
         </div>
