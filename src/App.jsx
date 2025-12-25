@@ -46,23 +46,31 @@ const Navbar = ({ cartCount, toggleCart, user, openProfile }) => (
 );
 
 const RadioPlayer = () => {
-  const [playing, setPlaying] = useState(false);
+  // CHANGED: Default is now TRUE so music starts immediately after entering
+  const [playing, setPlaying] = useState(true);
   const [trackIndex, setTrackIndex] = useState(0);
   const audioRef = useRef(new Audio(RADIO_PLAYLIST[0].url));
 
   useEffect(() => {
     const audio = audioRef.current;
+    
+    // Auto-play on mount (since user already clicked "ENTER")
+    audio.play().catch(e => console.log("Autoplay caught - will wait for interaction"));
+
     const handleEnded = () => {
       setTrackIndex((prev) => (prev + 1) % RADIO_PLAYLIST.length);
     };
     audio.addEventListener('ended', handleEnded);
-    return () => audio.removeEventListener('ended', handleEnded);
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.pause();
+    };
   }, []);
 
   useEffect(() => {
     if (playing) {
       audioRef.current.src = RADIO_PLAYLIST[trackIndex].url;
-      audioRef.current.play();
+      audioRef.current.play().catch(e => console.log("Buffering..."));
     } else {
       audioRef.current.src = RADIO_PLAYLIST[trackIndex].url;
     }
@@ -70,7 +78,7 @@ const RadioPlayer = () => {
 
   const togglePlay = () => {
     if (playing) audioRef.current.pause();
-    else audioRef.current.play().catch(e => console.log("Click interaction needed first"));
+    else audioRef.current.play();
     setPlaying(!playing);
   };
 
@@ -110,23 +118,16 @@ const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
     e.preventDefault();
     setLoading(true);
 
-    // --- SEND TO GOOGLE SHEET ---
     if (GOOGLE_SCRIPT_URL !== "PASTE_YOUR_URL_HERE") {
       try {
         const formBody = new FormData();
-        // Append all form data
         Object.keys(formData).forEach(key => formBody.append(key, formData[key]));
-        
-        await fetch(GOOGLE_SCRIPT_URL, {
-          method: 'POST',
-          body: formBody
-        });
+        await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: formBody });
       } catch (err) {
         console.error("Sheet Error", err);
       }
     }
 
-    // Save locally
     localStorage.setItem('heavy_user', JSON.stringify(formData));
     setUser(formData);
     setLoading(false);
@@ -139,12 +140,7 @@ const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
       {isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
-          <motion.div 
-            initial={{ y: 100, opacity: 0 }} 
-            animate={{ y: 0, opacity: 1 }} 
-            exit={{ y: 100, opacity: 0 }} 
-            className="bg-[#111] border border-gray-800 p-8 w-full max-w-md relative z-10 shadow-2xl shadow-red-900/20"
-          >
+          <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="bg-[#111] border border-gray-800 p-8 w-full max-w-md relative z-10 shadow-2xl shadow-red-900/20">
             <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X size={24} /></button>
             <h2 className="text-3xl font-['Anton'] text-white uppercase mb-2">Identify Yourself</h2>
             <p className="text-gray-500 font-['Space_Grotesk'] text-xs mb-6">JOIN THE WAITLIST. GET DROP ACCESS.</p>
@@ -170,14 +166,44 @@ export default function HeavyShitApp() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [cart, setCart] = useState([]);
   const [user, setUser] = useState(null);
+  
+  // NEW: State for Enter Screen
+  const [hasEntered, setHasEntered] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('heavy_user');
     if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
+  // NEW: Enter function
+  const enterSite = () => {
+    setHasEntered(true);
+  };
+
   const containerVars = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const itemVars = { hidden: { opacity: 0, y: 50 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 50 } } };
+
+  // --- RENDER: ENTER SCREEN OR MAIN APP ---
+  if (!hasEntered) {
+    return (
+      <div 
+        onClick={enterSite} 
+        className="h-screen w-full bg-black text-white flex flex-col items-center justify-center cursor-pointer z-50 selection:bg-red-600"
+      >
+        <motion.h1 
+          initial={{ opacity: 0, scale: 0.9 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }} 
+          className="font-['Anton'] text-6xl md:text-9xl uppercase tracking-tighter hover:text-red-600 transition-colors"
+        >
+          ENTER
+        </motion.h1>
+        <p className="mt-4 font-['Space_Grotesk'] text-sm text-gray-500 tracking-[0.5em] uppercase">
+          Tap to Access / Sound On
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white overflow-x-hidden font-['Space_Grotesk']">
