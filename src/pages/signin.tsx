@@ -1,9 +1,20 @@
-export default function LoginPage() {
+import { useRouter } from "next/router";
+
+export default function SignInPage() {
+  const router = useRouter();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Demo: set a fake token
+    localStorage.setItem("authToken", "demo-token");
+    router.push("/"); // redirect to home
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-black text-white">
       <div className="w-full max-w-sm p-6 bg-gray-900 rounded shadow-lg">
         <h1 className="text-2xl font-bold mb-4">Sign In</h1>
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="block mb-1">Email</label>
             <input
