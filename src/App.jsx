@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, User, X, Play, Pause, SkipForward, Radio, ArrowRight } from 'lucide-react';
+import Inventory from "./components/Inventory";
+import DropRegister from "./components/DropRegister";
 
+export default function App() {
+  return (
+    <div className="p-6 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">HEAVY Admin Panel</h1>
+      <Inventory />
+      <DropRegister />
+    </div>
+  );
+}
 // --- CONFIGURATION ---
 // ⚠️ PASTE YOUR GOOGLE WEB APP URL INSIDE THE QUOTES BELOW:
 const GOOGLE_SCRIPT_URL = "PASTE_YOUR_URL_HERE"; 
