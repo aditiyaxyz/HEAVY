@@ -11,30 +11,8 @@
   </head>
   <body>
     <div id="root"></div>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // DOM Elements
-        const artistInput = document.getElementById('artist');
-        const songInput = document.getElementById('song');
-        const findBtn = document.getElementById('findBtn');
-        const resultDiv = document.getElementById('result');
-        const playerDiv = document.getElementById('player');
-        const albumArt = document.getElementById('albumArt');
-        const audioPlayer = document.getElementById('audioPlayer');
-        const playBtn = document.getElementById('playBtn');
-        const pauseBtn = document.getElementById('pauseBtn');
-        const volumeControl = document.getElementById('volumeControl');
-        
-        // Audio state
-        let isAudioReady = false;
-        
-        // Initialize audio on first user interaction
-        function initAudio() {
-            if (!isAudioReady) {
-                console.log('Audio system initialized');
-                isAudioReady = true;
-            }
-        }
+    </body>
+</html>        }
         
         // Initialize audio on ANY user interaction
         document.addEventListener('click', function initOnClick() {
