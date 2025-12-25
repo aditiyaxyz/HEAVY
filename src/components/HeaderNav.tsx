@@ -13,6 +13,12 @@ export default function HeaderNav() {
     setIsLoggedIn(!!token);
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    setIsLoggedIn(false);
+    setOpen(false);
+  };
+
   return (
     <nav className="flex items-center justify-between px-6 py-4 bg-black text-white">
       {/* Left side */}
@@ -32,7 +38,7 @@ export default function HeaderNav() {
       <div className="flex items-center space-x-4 relative">
         {!isLoggedIn ? (
           <>
-            <Link href="/login" className="hover:text-gray-300 transition-colors duration-300">
+            <Link href="/signin" className="hover:text-gray-300 transition-colors duration-300">
               Sign In
             </Link>
             <Link href="/signup" className="hover:text-gray-300 transition-colors duration-300">
@@ -61,13 +67,12 @@ export default function HeaderNav() {
               >
                 My Account
               </Link>
-              <Link
-                href="/logout"
-                className="block px-4 py-2 hover:bg-gray-100 transition-colors duration-200"
-                onClick={() => setOpen(false)}
+              <button
+                onClick={handleLogout}
+                className="w-full text-left block px-4 py-2 hover:bg-gray-100 transition-colors duration-200"
               >
                 Logout
-              </Link>
+              </button>
             </div>
           </div>
         )}
