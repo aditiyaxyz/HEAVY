@@ -2,15 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, User, X, Play, Pause, SkipForward, Radio, ArrowRight } from 'lucide-react';
 
+// --- CONFIGURATION ---
+// ⚠️ PASTE YOUR GOOGLE WEB APP URL INSIDE THE QUOTES BELOW:
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaMj1WFKYvx8urHdlOpWzvyuP4AOB5QeHoRwjXAB6-YzxVrvH6Js73T7X2H7QSnF4/exec"; 
+
 // --- RADIO STATION CONFIG ---
-// Nonstop Trap/Phonk Playlist
 const RADIO_PLAYLIST = [
   { title: "HEAVY ROTATION", url: "https://cdn.pixabay.com/audio/2022/03/24/audio_341e33f393.mp3" },
   { title: "NIGHT RIDE", url: "https://cdn.pixabay.com/audio/2022/10/25/audio_5575508822.mp3" },
   { title: "DRIFT PHONK", url: "https://cdn.pixabay.com/audio/2023/04/12/audio_6c99c36292.mp3" }
 ];
 
-// --- INVENTORY MANAGEMENT (Edit this list to change products) ---
 const NEXT_DROP = {
   name: "PHANTOM BOMBER",
   price: 150,
@@ -48,7 +50,6 @@ const RadioPlayer = () => {
   const [trackIndex, setTrackIndex] = useState(0);
   const audioRef = useRef(new Audio(RADIO_PLAYLIST[0].url));
 
-  // Handle auto-next track
   useEffect(() => {
     const audio = audioRef.current;
     const handleEnded = () => {
@@ -58,23 +59,18 @@ const RadioPlayer = () => {
     return () => audio.removeEventListener('ended', handleEnded);
   }, []);
 
-  // Handle track changes
   useEffect(() => {
     if (playing) {
       audioRef.current.src = RADIO_PLAYLIST[trackIndex].url;
       audioRef.current.play();
     } else {
-      // Just update source without playing if paused
       audioRef.current.src = RADIO_PLAYLIST[trackIndex].url;
     }
   }, [trackIndex]);
 
   const togglePlay = () => {
-    if (playing) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(e => console.log("Click interaction needed first"));
-    }
+    if (playing) audioRef.current.pause();
+    else audioRef.current.play().catch(e => console.log("Click interaction needed first"));
     setPlaying(!playing);
   };
 
@@ -90,9 +86,7 @@ const RadioPlayer = () => {
          <div className="flex flex-col w-28">
             <span className="text-[10px] text-gray-400 font-['Space_Grotesk'] uppercase tracking-widest">Underground FM</span>
             <div className="overflow-hidden whitespace-nowrap">
-                <span className="text-xs font-['Anton'] uppercase animate-marquee inline-block">
-                  {RADIO_PLAYLIST[trackIndex].title}
-                </span>
+                <span className="text-xs font-['Anton'] uppercase animate-marquee inline-block">{RADIO_PLAYLIST[trackIndex].title}</span>
             </div>
          </div>
       </div>
@@ -112,19 +106,33 @@ const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ Name: '', Email: '', Phone: '', Size: 'M' });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate network delay for effect
-    setTimeout(() => {
-      // Save locally to browser
-      localStorage.setItem('heavy_user', JSON.stringify(formData));
-      setUser(formData);
-      setLoading(false);
-      onClose();
-      alert("WELCOME TO THE UNIT.");
-    }, 1000);
+    // --- SEND TO GOOGLE SHEET ---
+    if (GOOGLE_SCRIPT_URL !== "PASTE_YOUR_URL_HERE") {
+      try {
+        const formBody = new FormData();
+        // Append all form data
+        Object.keys(formData).forEach(key => formBody.append(key, formData[key]));
+        
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          body: formBody
+        });
+      } catch (err) {
+        console.error("Sheet Error", err);
+        // We continue anyway so the user doesn't feel it broke
+      }
+    }
+
+    // Save locally
+    localStorage.setItem('heavy_user', JSON.stringify(formData));
+    setUser(formData);
+    setLoading(false);
+    alert("PROFILE UPDATED. YOU ARE ON THE LIST.");
+    onClose();
   };
 
   return (
@@ -140,12 +148,22 @@ const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
           >
             <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X size={24} /></button>
             <h2 className="text-3xl font-['Anton'] text-white uppercase mb-2">Identify Yourself</h2>
-            <p className="text-gray-500 font-['Space_Grotesk'] text-xs mb-6">DATA SAVED LOCALLY. NO TRACKING.</p>
+            <p className="text-gray-500 font-['Space_Grotesk'] text-xs mb-6">JOIN THE WAITLIST. GET DROP ACCESS.</p>
             <form onSubmit={handleSubmit} className="space-y-4 font-['Space_Grotesk']">
               <input required placeholder="FULL NAME" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Name: e.target.value})} />
               <input required type="email" placeholder="EMAIL" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Email: e.target.value})} />
+              <input required type="tel" placeholder="PHONE" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Phone: e.target.value})} />
+              <div className="flex gap-4">
+                 <select className="w-1/3 bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase" onChange={e => setFormData({...formData, Size: e.target.value})}>
+                   <option value="S">SIZE S</option>
+                   <option value="M">SIZE M</option>
+                   <option value="L">SIZE L</option>
+                   <option value="XL">SIZE XL</option>
+                 </select>
+                 <div className="w-2/3 flex items-center justify-center text-gray-500 text-xs uppercase border border-gray-800">No Payment Required Yet</div>
+              </div>
               <button disabled={loading} className="w-full bg-red-600 text-white font-['Anton'] py-4 text-xl hover:bg-white hover:text-black transition-colors uppercase tracking-widest">
-                {loading ? "PROCESSING..." : "JOIN WAITLIST"}
+                {loading ? "SAVING..." : "CONFIRM PROFILE"}
               </button>
             </form>
           </motion.div>
@@ -168,19 +186,8 @@ export default function HeavyShitApp() {
     if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
-  // Animation Variants
-  const containerVars = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
-
-  const itemVars = {
-    hidden: { opacity: 0, y: 50 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 50 } }
-  };
+  const containerVars = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+  const itemVars = { hidden: { opacity: 0, y: 50 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 50 } } };
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white overflow-x-hidden font-['Space_Grotesk']">
@@ -218,18 +225,15 @@ export default function HeavyShitApp() {
 
       {/* --- HERO SECTION --- */}
       <section className="h-screen flex flex-col md:flex-row items-center justify-center px-6 md:px-20 gap-10 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] relative overflow-hidden">
-        {/* Abstract Background Element */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600/20 blur-[100px] rounded-full pointer-events-none"></div>
 
         <div className="flex-1 space-y-6 text-center md:text-left z-10 mt-20 md:mt-0">
           <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} className="inline-block border border-red-600 text-red-600 px-4 py-1 font-['Space_Grotesk'] text-xs tracking-[0.3em] uppercase">
             Start a cult
           </motion.div>
-          
           <motion.h1 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: "spring" }} className="text-6xl md:text-9xl font-['Anton'] uppercase leading-none tracking-tighter">
             HEAVY<br/><span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-600">SHIT.</span>
           </motion.h1>
-
           <motion.button 
             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={() => setProfileOpen(true)}
@@ -254,4 +258,39 @@ export default function HeavyShitApp() {
 
       {/* --- SHOP GRID --- */}
       <main className="container mx-auto px-6 py-20">
-        <div className="mb-12 border-b border-gray-800 pb-4 flex justify-between items
+        <div className="mb-12 border-b border-gray-800 pb-4 flex justify-between items-end">
+           <h3 className="font-['Anton'] text-4xl text-gray-500">INVENTORY</h3>
+           <span className="text-xs font-['Space_Grotesk'] text-red-600 flex items-center gap-2"><span className="w-2 h-2 bg-red-600 rounded-full animate-ping"></span> LIVE STOCK</span>
+        </div>
+        <motion.div variants={containerVars} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {INITIAL_PRODUCTS.map(p => (
+            <motion.div variants={itemVars} key={p.id} className="bg-[#111] border border-gray-900 group relative hover:border-red-900 transition-colors duration-500">
+              <div className="aspect-[3/4] overflow-hidden relative">
+                <img src={p.image} className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${p.status === 'SOLD OUT' ? 'grayscale opacity-40' : 'grayscale group-hover:grayscale-0'}`} />
+                {p.status === 'SOLD OUT' && <div className="absolute inset-0 flex items-center justify-center"><div className="bg-red-600 text-white font-['Anton'] text-xl px-4 py-1 -rotate-12">SOLD OUT</div></div>}
+              </div>
+              <div className="p-4 relative z-10 bg-[#111]">
+                <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-['Anton'] text-xl tracking-wide">{p.name}</h3>
+                    <span className="font-['Space_Grotesk'] text-sm text-gray-400">${p.price}</span>
+                </div>
+                {p.status === 'AVAILABLE' ? (
+                  <button onClick={() => setCart([...cart, p])} className="w-full mt-2 border border-white/20 py-3 text-xs uppercase hover:bg-white hover:text-black transition-colors font-bold tracking-widest">Add to Cart</button>
+                ) : (
+                  <button disabled className="w-full mt-2 border border-gray-800 py-3 text-xs uppercase text-gray-600 cursor-not-allowed tracking-widest">Unavailable</button>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </main>
+
+      {/* MARQUEE */}
+      <div className="bg-red-600 text-black py-3 overflow-hidden whitespace-nowrap">
+        <motion.div animate={{ x: ["0%", "-50%"] }} transition={{ repeat: Infinity, ease: "linear", duration: 15 }} className="flex gap-12 font-['Anton'] text-lg uppercase tracking-widest">
+           {[...Array(20)].map((_, i) => <span key={i}>NO RESTOCKS • HEAVY SHIT • WORLDWIDE SHIPPING •</span>)}
+        </motion.div>
+      </div>
+    </div>
+  );
+}
