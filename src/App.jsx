@@ -4,6 +4,7 @@ import { ShoppingBag, X, Play, Pause, Radio, ArrowRight, Volume2, VolumeX } from
 
 // --- CONFIGURATION ---
 const LOCAL_TRACK = "/heavy_loop.mp3"; 
+const FALLBACK_TRACK = "https://cdn.pixabay.com/download/audio/2021/09/28/audio_7a0c4a3da1.mp3?filename=loop-ambient-116528.mp3";
 
 const NEXT_DROP = {
   name: "PHANTOM BOMBER",
@@ -35,28 +36,87 @@ const Navbar = ({ cartCount, toggleCart }) => (
 );
 
 const RadioPlayer = () => {
-  const [playing, setPlaying] = useState(true);
-  const audioRef = useRef(new Audio(LOCAL_TRACK));
+  const [playing, setPlaying] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState(null);
+  const audioRef = useRef(null);
 
   useEffect(() => {
-    const audio = audioRef.current;
-    audio.loop = true; 
-    audio.volume = 0.4; 
+    let mounted = true;
+    const a = new Audio(LOCAL_TRACK);
+    audioRef.current = a;
+    a.loop = true;
+    a.volume = 0.4;
 
-    const playPromise = audio.play();
+    const onCanPlay = () => {
+      if (!mounted) return;
+      setReady(true);
+    };
+
+    const tryFallback = () => {
+      if (!mounted) return;
+      console.warn('Audio load error for local track, attempting fallback');
+      setError('Failed to load local audio, switching to fallback');
+      const fb = new Audio(FALLBACK_TRACK);
+      fb.loop = true;
+      fb.volume = 0.4;
+      audioRef.current = fb;
+      fb.addEventListener('canplay', () => {
+        if (!mounted) return;
+        setError(null);
+        setReady(true);
+      }, { once: true });
+      fb.addEventListener('error', () => {
+        if (!mounted) return;
+        setError('Failed to load audio.');
+        setReady(false);
+      }, { once: true });
+    };
+
+    const onError = () => tryFallback();
+
+    a.addEventListener('canplay', onCanPlay);
+    a.addEventListener('error', onError);
+
+    const playPromise = a.play();
     if (playPromise !== undefined) {
-      playPromise.catch(error => {
-        console.log("Autoplay prevented:", error);
+      playPromise.then(() => {
+        if (!mounted) return;
+        setPlaying(true);
+        setReady(true);
+      }).catch((err) => {
+        console.log('Autoplay prevented or play failed:', err);
         setPlaying(false);
       });
     }
-    return () => { audio.pause(); };
+
+    return () => {
+      mounted = false;
+      try { a.pause(); } catch {}
+      a.removeEventListener('canplay', onCanPlay);
+      a.removeEventListener('error', onError);
+      if (audioRef.current && audioRef.current !== a) {
+        try { audioRef.current.pause(); } catch {}
+      }
+    };
   }, []);
 
-  const togglePlay = () => {
-    if (playing) audioRef.current.pause();
-    else audioRef.current.play();
-    setPlaying(!playing);
+  const togglePlay = async () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) {
+      a.pause();
+      setPlaying(false);
+      return;
+    }
+    try {
+      await a.play();
+      setPlaying(true);
+      setError(null);
+    } catch (err) {
+      console.warn('Play attempt failed:', err);
+      setError('Playback blocked — tap to allow audio.');
+    }
   };
 
   return (
@@ -74,6 +134,8 @@ const RadioPlayer = () => {
         <button onClick={togglePlay} className="hover:text-red-500 transition-colors">
           {playing ? <Volume2 size={18} /> : <VolumeX size={18} />}
         </button>
+        {!ready && <span className="text-xs text-gray-400 ml-2">Loading…</span>}
+        {error && <span className="text-xs text-yellow-400 ml-2">{error}</span>}
       </div>
     </div>
   );
@@ -100,13 +162,13 @@ const WaitlistModal = ({ isOpen, onClose }) => {
       {isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
-          <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="bg-[#111] border border-gray-800 p-8 w-full max-w-md relative z-10 shadow-2xl shadow-red-900/20">
+          <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="bg-[#111] border border-gray-800 p-8 w-full max-w-md relative z-10">
             <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X size={24} /></button>
             <h2 className="text-3xl font-['Anton'] text-white uppercase mb-2">Secure Your Spot</h2>
             <p className="text-gray-500 font-['Space_Grotesk'] text-xs mb-6">BE THE FIRST TO KNOW WHEN WE DROP.</p>
             <form onSubmit={handleSubmit} className="space-y-4 font-['Space_Grotesk']">
-              <input required placeholder="FULL NAME" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Name: e.target.value})} />
-              <input required type="email" placeholder="EMAIL" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Email: e.target.value})} />
+              <input required placeholder="FULL NAME" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-500" onChange={(e)=>setFormData({...formData, Name: e.target.value})} />
+              <input required type="email" placeholder="EMAIL" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest" onChange={(e)=>setFormData({...formData, Email: e.target.value})} />
               <button disabled={loading} className="w-full bg-red-600 text-white font-['Anton'] py-4 text-xl hover:bg-white hover:text-black transition-colors uppercase tracking-widest">
                 {loading ? "REGISTERING..." : "CONFIRM INTEREST"}
               </button>
@@ -134,9 +196,7 @@ export default function HeavyShitApp() {
   if (!hasEntered) {
     return (
       <div onClick={enterSite} className="h-screen w-full bg-black text-white flex flex-col items-center justify-center cursor-pointer z-50 selection:bg-red-600">
-        <motion.h1 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }} className="font-['Anton'] text-6xl md:text-9xl uppercase tracking-tighter hover:text-red-600 transition-colors">
-          ENTER
-        </motion.h1>
+        <motion.h1 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }} className="font-['Anton'] text-6xl">ENTER</motion.h1>
         <p className="mt-4 font-['Space_Grotesk'] text-sm text-gray-500 tracking-[0.5em] uppercase">Tap to Access / Sound On</p>
       </div>
     );
@@ -181,17 +241,12 @@ export default function HeavyShitApp() {
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600/20 blur-[100px] rounded-full pointer-events-none"></div>
 
         <div className="flex-1 space-y-6 text-center md:text-left z-10 mt-20 md:mt-0">
-          <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} className="inline-block border border-red-600 text-red-600 px-4 py-1 font-['Space_Grotesk'] text-xs tracking-[0.3em] uppercase">
-            DROPPING SOON
-          </motion.div>
-          <motion.h1 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: "spring" }} className="text-6xl md:text-9xl font-['Anton'] uppercase leading-none tracking-tighter">
-            HEAVY<br/><span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-600">SHIT.</span>
-          </motion.h1>
+          <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} className="inline-block border border-red-600 text-red-600 px-4 py-1 font-['Space_Grotesk'] text-xs uppercase tracking-widest">DROPPING SOON</motion.div>
+          <motion.h1 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: "spring" }} className="text-6xl md:text-9xl font-['Anton'] uppercase leading-tight">HEAVY<br/><span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-600">SHIT.</span></motion.h1>
           <motion.button 
             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={() => setWaitlistOpen(true)}
-            className="group relative bg-white text-black px-10 py-4 font-['Anton'] text-lg tracking-widest uppercase hover:bg-red-600 hover:text-white transition-all duration-300 skew-x-[-10deg]"
-          >
+            className="group relative bg-white text-black px-10 py-4 font-['Anton'] text-lg tracking-widest uppercase hover:bg-red-600 hover:text-white transition-all duration-300">
             <span className="skew-x-[10deg] inline-block flex items-center gap-2">
               REGISTER YOUR INTEREST NOW <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </span>
@@ -228,7 +283,7 @@ export default function HeavyShitApp() {
                     <span className="font-['Space_Grotesk'] text-sm text-gray-400">${p.price}</span>
                 </div>
                 {p.status === 'AVAILABLE' ? (
-                  <button onClick={() => setCart([...cart, p])} className="w-full mt-2 border border-white/20 py-3 text-xs uppercase hover:bg-white hover:text-black transition-colors font-bold tracking-widest">Add to Cart</button>
+                  <button onClick={() => setCart([...cart, p])} className="w-full mt-2 border border-white/20 py-3 text-xs uppercase hover:bg-white hover:text-black transition-colors font-bold tracking-widest">ADD TO CART</button>
                 ) : (
                   <button disabled className="w-full mt-2 border border-gray-800 py-3 text-xs uppercase text-gray-600 cursor-not-allowed tracking-widest">Unavailable</button>
                 )}
