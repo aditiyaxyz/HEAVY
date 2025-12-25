@@ -1,13 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, User, X, Play, Pause, Radio, ArrowRight, Volume2 } from 'lucide-react';
+import { ShoppingBag, X, Play, Pause, Radio, ArrowRight, Volume2, VolumeX } from 'lucide-react';
 
 // --- CONFIGURATION ---
-// ⚠️ PASTE YOUR GOOGLE WEB APP URL INSIDE THE QUOTES BELOW:
-const GOOGLE_SCRIPT_URL = "PASTE_YOUR_URL_HERE"; 
-
-// --- LIVE STREAM CONFIG ---
-const STREAM_URL = "https://nap.casthost.net/proxy/gtronicr/stream";
+const LOCAL_TRACK = "/heavy_loop.mp3"; 
 
 const NEXT_DROP = {
   name: "PHANTOM BOMBER",
@@ -26,13 +22,10 @@ const INITIAL_PRODUCTS = [
 
 // --- COMPONENTS ---
 
-const Navbar = ({ cartCount, toggleCart, user, openProfile }) => (
+const Navbar = ({ cartCount, toggleCart }) => (
   <nav className="fixed top-0 w-full z-50 flex justify-between items-center p-6 bg-black/90 backdrop-blur-md border-b border-gray-900 text-white">
     <div className="text-2xl font-['Anton'] tracking-wider cursor-pointer text-red-600 hover:tracking-widest transition-all duration-300">HEAVY SHIT.</div>
     <div className="flex items-center gap-6 font-['Space_Grotesk']">
-      <button onClick={openProfile} className="flex items-center gap-2 text-xs uppercase tracking-widest hover:text-red-500 transition-colors">
-        <User size={16} /> {user ? user.Name : "JOIN UNIT"}
-      </button>
       <button onClick={toggleCart} className="relative hover:text-red-500 transition-colors">
         <ShoppingBag size={24} />
         {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">{cartCount}</span>}
@@ -43,36 +36,26 @@ const Navbar = ({ cartCount, toggleCart, user, openProfile }) => (
 
 const RadioPlayer = () => {
   const [playing, setPlaying] = useState(true);
-  const audioRef = useRef(new Audio(STREAM_URL));
+  const audioRef = useRef(new Audio(LOCAL_TRACK));
 
   useEffect(() => {
     const audio = audioRef.current;
-    
-    // Auto-play logic since user already clicked "ENTER"
-    audio.play().catch(e => console.log("Stream waiting for interaction"));
+    audio.loop = true; 
+    audio.volume = 0.4; 
 
-    // Ensure we reconnect if the stream drops
-    audio.addEventListener('error', (e) => {
-        console.log("Stream dropped, attempting reconnect...");
-        setTimeout(() => {
-            audio.src = STREAM_URL;
-            audio.play();
-        }, 3000);
-    });
-
-    return () => {
-      audio.pause();
-    };
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(error => {
+        console.log("Autoplay prevented:", error);
+        setPlaying(false);
+      });
+    }
+    return () => { audio.pause(); };
   }, []);
 
   const togglePlay = () => {
-    if (playing) {
-        audioRef.current.pause();
-    } else {
-        // Reload source to ensure we are "live" and not playing buffered old content
-        audioRef.current.src = STREAM_URL; 
-        audioRef.current.play();
-    }
+    if (playing) audioRef.current.pause();
+    else audioRef.current.play();
     setPlaying(!playing);
   };
 
@@ -81,46 +64,35 @@ const RadioPlayer = () => {
       <div className="flex items-center gap-2">
          <Radio size={16} className={`text-red-600 ${playing ? 'animate-pulse' : ''}`} />
          <div className="flex flex-col w-32">
-            <span className="text-[10px] text-gray-400 font-['Space_Grotesk'] uppercase tracking-widest">LIVE FEED</span>
+            <span className="text-[10px] text-gray-400 font-['Space_Grotesk'] uppercase tracking-widest">SYSTEM AUDIO</span>
             <div className="overflow-hidden whitespace-nowrap">
-                <span className="text-xs font-['Anton'] uppercase text-white tracking-widest">GTRONIC RADIO</span>
+                <span className="text-xs font-['Anton'] uppercase text-white tracking-widest">HEAVY ROTATION</span>
             </div>
          </div>
       </div>
       <div className="flex items-center gap-3 border-l border-gray-700 pl-3">
         <button onClick={togglePlay} className="hover:text-red-500 transition-colors">
-          {playing ? <Pause size={18} /> : <Play size={18} />}
+          {playing ? <Volume2 size={18} /> : <VolumeX size={18} />}
         </button>
-        {/* Removed Skip Button because you can't skip a Live Stream */}
-        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
       </div>
     </div>
   );
 };
 
-const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
+const WaitlistModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ Name: '', Email: '', Phone: '' });
+  const [formData, setFormData] = useState({ Name: '', Email: '' });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
-
-    if (GOOGLE_SCRIPT_URL !== "PASTE_YOUR_URL_HERE") {
-      try {
-        const formBody = new FormData();
-        Object.keys(formData).forEach(key => formBody.append(key, formData[key]));
-        await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: formBody });
-      } catch (err) {
-        console.error("Sheet Error", err);
-      }
-    }
-
-    localStorage.setItem('heavy_user', JSON.stringify(formData));
-    setUser(formData);
-    setLoading(false);
-    alert("PROFILE UPDATED. YOU ARE ON THE LIST.");
-    onClose();
+    // Simulate API call
+    setTimeout(() => {
+      localStorage.setItem('heavy_waitlist', JSON.stringify(formData));
+      setLoading(false);
+      alert("YOU ARE REGISTERED.");
+      onClose();
+    }, 1000);
   };
 
   return (
@@ -130,14 +102,13 @@ const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
           <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="bg-[#111] border border-gray-800 p-8 w-full max-w-md relative z-10 shadow-2xl shadow-red-900/20">
             <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X size={24} /></button>
-            <h2 className="text-3xl font-['Anton'] text-white uppercase mb-2">Identify Yourself</h2>
-            <p className="text-gray-500 font-['Space_Grotesk'] text-xs mb-6">JOIN THE WAITLIST. GET DROP ACCESS.</p>
+            <h2 className="text-3xl font-['Anton'] text-white uppercase mb-2">Secure Your Spot</h2>
+            <p className="text-gray-500 font-['Space_Grotesk'] text-xs mb-6">BE THE FIRST TO KNOW WHEN WE DROP.</p>
             <form onSubmit={handleSubmit} className="space-y-4 font-['Space_Grotesk']">
               <input required placeholder="FULL NAME" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Name: e.target.value})} />
               <input required type="email" placeholder="EMAIL" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Email: e.target.value})} />
-              <input required type="tel" placeholder="PHONE" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-700 transition-colors" onChange={e => setFormData({...formData, Phone: e.target.value})} />
               <button disabled={loading} className="w-full bg-red-600 text-white font-['Anton'] py-4 text-xl hover:bg-white hover:text-black transition-colors uppercase tracking-widest">
-                {loading ? "SAVING..." : "CONFIRM PROFILE"}
+                {loading ? "REGISTERING..." : "CONFIRM INTEREST"}
               </button>
             </form>
           </motion.div>
@@ -151,50 +122,31 @@ const ProfileModal = ({ isOpen, onClose, user, setUser }) => {
 
 export default function HeavyShitApp() {
   const [cartOpen, setCartOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [cart, setCart] = useState([]);
-  const [user, setUser] = useState(null);
   const [hasEntered, setHasEntered] = useState(false);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem('heavy_user');
-    if (savedUser) setUser(JSON.parse(savedUser));
-  }, []);
-
-  const enterSite = () => {
-    setHasEntered(true);
-  };
-
+  const enterSite = () => setHasEntered(true);
+  
   const containerVars = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const itemVars = { hidden: { opacity: 0, y: 50 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 50 } } };
 
-  // --- RENDER: ENTER SCREEN ---
   if (!hasEntered) {
     return (
-      <div 
-        onClick={enterSite} 
-        className="h-screen w-full bg-black text-white flex flex-col items-center justify-center cursor-pointer z-50 selection:bg-red-600"
-      >
-        <motion.h1 
-          initial={{ opacity: 0, scale: 0.9 }} 
-          animate={{ opacity: 1, scale: 1 }} 
-          transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }} 
-          className="font-['Anton'] text-6xl md:text-9xl uppercase tracking-tighter hover:text-red-600 transition-colors"
-        >
+      <div onClick={enterSite} className="h-screen w-full bg-black text-white flex flex-col items-center justify-center cursor-pointer z-50 selection:bg-red-600">
+        <motion.h1 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }} className="font-['Anton'] text-6xl md:text-9xl uppercase tracking-tighter hover:text-red-600 transition-colors">
           ENTER
         </motion.h1>
-        <p className="mt-4 font-['Space_Grotesk'] text-sm text-gray-500 tracking-[0.5em] uppercase">
-          Tap to Access / Sound On
-        </p>
+        <p className="mt-4 font-['Space_Grotesk'] text-sm text-gray-500 tracking-[0.5em] uppercase">Tap to Access / Sound On</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white overflow-x-hidden font-['Space_Grotesk']">
-      <Navbar cartCount={cart.length} toggleCart={() => setCartOpen(!cartOpen)} user={user} openProfile={() => setProfileOpen(true)} />
+      <Navbar cartCount={cart.length} toggleCart={() => setCartOpen(!cartOpen)} />
       <RadioPlayer />
-      <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} user={user} setUser={setUser} />
+      <WaitlistModal isOpen={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
 
       {/* --- CART SIDEBAR --- */}
       <AnimatePresence>
@@ -213,7 +165,7 @@ export default function HeavyShitApp() {
                      <img src={item.image} className="w-16 h-16 object-cover" />
                      <div>
                        <h4 className="font-bold">{item.name}</h4>
-                       <p className="text-gray-400">₹{item.price}</p>
+                       <p className="text-gray-400">${item.price}</p>
                      </div>
                    </div>
                  ))}
@@ -230,18 +182,18 @@ export default function HeavyShitApp() {
 
         <div className="flex-1 space-y-6 text-center md:text-left z-10 mt-20 md:mt-0">
           <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} className="inline-block border border-red-600 text-red-600 px-4 py-1 font-['Space_Grotesk'] text-xs tracking-[0.3em] uppercase">
-            OFFICIAL RELEASE CHANNEL
+            DROPPING SOON
           </motion.div>
           <motion.h1 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: "spring" }} className="text-6xl md:text-9xl font-['Anton'] uppercase leading-none tracking-tighter">
             HEAVY<br/><span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-600">SHIT.</span>
           </motion.h1>
           <motion.button 
             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-            onClick={() => setProfileOpen(true)}
-            className="group relative bg-white text-black px-12 py-5 font-['Anton'] text-2xl tracking-widest uppercase hover:bg-red-600 hover:text-white transition-all duration-300 skew-x-[-10deg]"
+            onClick={() => setWaitlistOpen(true)}
+            className="group relative bg-white text-black px-10 py-4 font-['Anton'] text-lg tracking-widest uppercase hover:bg-red-600 hover:text-white transition-all duration-300 skew-x-[-10deg]"
           >
             <span className="skew-x-[10deg] inline-block flex items-center gap-2">
-              {user ? "ACCESS GRANTED" : "REGISTER FOR DROP"} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+              REGISTER YOUR INTEREST NOW <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </span>
           </motion.button>
         </div>
@@ -258,7 +210,7 @@ export default function HeavyShitApp() {
       </section>
 
       {/* --- SHOP GRID --- */}
-      <main className="container mx-auto px-6 py-20">
+      <main id="inventory" className="container mx-auto px-6 py-20">
         <div className="mb-12 border-b border-gray-800 pb-4 flex justify-between items-end">
            <h3 className="font-['Anton'] text-4xl text-gray-500">INVENTORY</h3>
            <span className="text-xs font-['Space_Grotesk'] text-red-600 flex items-center gap-2"><span className="w-2 h-2 bg-red-600 rounded-full animate-ping"></span> LIVE STOCK</span>
@@ -267,13 +219,13 @@ export default function HeavyShitApp() {
           {INITIAL_PRODUCTS.map(p => (
             <motion.div variants={itemVars} key={p.id} className="bg-[#111] border border-gray-900 group relative hover:border-red-900 transition-colors duration-500">
               <div className="aspect-[3/4] overflow-hidden relative">
-                <img src={p.image} className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ₹{p.status === 'SOLD OUT' ? 'grayscale opacity-40' : 'grayscale group-hover:grayscale-0'}`} />
+                <img src={p.image} className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${p.status === 'SOLD OUT' ? 'grayscale opacity-40' : 'grayscale group-hover:grayscale-0'}`} />
                 {p.status === 'SOLD OUT' && <div className="absolute inset-0 flex items-center justify-center"><div className="bg-red-600 text-white font-['Anton'] text-xl px-4 py-1 -rotate-12">SOLD OUT</div></div>}
               </div>
               <div className="p-4 relative z-10 bg-[#111]">
                 <div className="flex justify-between items-start mb-2">
                     <h3 className="font-['Anton'] text-xl tracking-wide">{p.name}</h3>
-                    <span className="font-['Space_Grotesk'] text-sm text-gray-400">₹{p.price}</span>
+                    <span className="font-['Space_Grotesk'] text-sm text-gray-400">${p.price}</span>
                 </div>
                 {p.status === 'AVAILABLE' ? (
                   <button onClick={() => setCart([...cart, p])} className="w-full mt-2 border border-white/20 py-3 text-xs uppercase hover:bg-white hover:text-black transition-colors font-bold tracking-widest">Add to Cart</button>
