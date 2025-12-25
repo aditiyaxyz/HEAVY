@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, User, X, Music, Volume2, VolumeX, ArrowRight, ExternalLink } from 'lucide-react';
 
 // --- CONFIGURATION ---
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFjUlTcRoGAcjdeo8jyA-7NOIKVPYud_Kl-K5Zes8-0cU4kCThJktIfPRjongpQJ3ARQ/exec"; 
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRoL3Q2ahKsayKy890gx4BCGI7ppDI5B_K1IUp_hHLxkZePZ6OmJTZj3qATula8BYjag/exec"; 
 
 const VIBE_TRACK = "https://cdn.pixabay.com/audio/2022/03/24/audio_341e33f393.mp3"; 
 const PLAYLIST_URL = "https://music.youtube.com/watch?v=xmj2QSbRZLE&list=RDCLAK5uy_kN4eY_ibobGvCBwIJGEGpDjuwzYHIG_iE";
