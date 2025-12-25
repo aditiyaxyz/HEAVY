@@ -1,12 +1,18 @@
-// HEAVY/components/VibesAlbum.tsx
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 
 export default function VibesAlbum() {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const handleClick = () => {
-    if (audioRef.current) {
+    if (!audioRef.current) return;
+
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
       audioRef.current.play();
+      setIsPlaying(true);
     }
   };
 
@@ -36,10 +42,10 @@ export default function VibesAlbum() {
         onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.95)")}
         onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
       >
-        VIBES
+        {isPlaying ? "PAUSE" : "VIBES"}
       </div>
 
-      <audio ref={audioRef} src="/heavy_loop.mp3" preload="auto" />
+      <audio ref={audioRef} src="/heavy_loop.mp3" preload="auto" loop />
     </>
   );
 }
