@@ -1,40 +1,40 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+// pages/login.tsx
+import React, { useState } from "react";
+import axios from "axios";
 
-const Login = () => {
-  const [form, setForm] = useState({
-    email: '',
-    password: '',
-  });
-  const [msg, setMsg] = useState('');
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('/api/auth/login', form);
-      setMsg('Login successful!');
-      // Save token/user in localStorage or context as needed
-      // localStorage.setItem('token', res.data.token);
-    } catch (err: any) {
-      setMsg(err.response?.data?.msg || 'Login error.');
+      const res = await axios.post("/api/login", { email, password });
+      localStorage.setItem("token", res.data.token);
+      window.location.href = "/"; // redirect to homepage/dashboard
+    } catch (err) {
+      alert("Invalid credentials. Please try again.");
     }
   };
 
   return (
-    <div>
+    <form onSubmit={handleSubmit} className="login-form">
       <h2>Login</h2>
-      {msg && <p>{msg}</p>}
-      <form onSubmit={handleSubmit}>
-        <input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required />
-        <input name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} required />
-        <button type="submit">Login</button>
-      </form>
-    </div>
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+      <button type="submit">Login</button>
+    </form>
   );
-};
-
-export default Login;
+}
