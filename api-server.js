@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 import fs from "fs/promises";
 import path from "path";
 import rateLimit from "express-rate-limit";
-import { createUser, findUserByEmail, getAllUsers } from "./lib/users.js";
+import { createUser, findUserByEmail, getAllUsers, updateUser, getOrdersForUser } from "./lib/users.js";
 
 dotenv.config({ path: ".env.local" });
 
@@ -67,6 +67,36 @@ app.post("/api/users/register", strictLimiter, async (req, res) => {
   }
 });
 
+// Login endpoint
+app.post("/api/auth/login", strictLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: "email is required" });
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: "User not found. Please register first." });
+    }
+
+    const sessionToken = jwt.sign({ email: user.email, type: "session" }, JWT_SECRET, { expiresIn: "7d" });
+
+    res.cookie("session", sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7 * 1000, // 7 days
+    });
+
+    return res.status(200).json({ ok: true, user });
+  } catch (err) {
+    return res.status(500).json({ error: "Login failed" });
+  }
+});
+
 // Get current user (session check)
 app.get("/api/auth/me", async (req, res) => {
   const token = req.cookies.session;
@@ -89,6 +119,45 @@ app.get("/api/auth/me", async (req, res) => {
 app.post("/api/auth/logout", (req, res) => {
   res.clearCookie("session", { path: "/" });
   return res.status(200).json({ ok: true, message: "Logged out" });
+});
+
+// Update profile endpoint
+app.put("/api/users/profile", strictLimiter, async (req, res) => {
+  const token = req.cookies.session;
+  if (!token) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    const { name, phone, instagram } = req.body;
+    
+    const user = await findUserByEmail(payload.email);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const updated = await updateUser(payload.email, { name, phone, instagram });
+    return res.status(200).json({ ok: true, user: updated });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
+// Get orders for current user
+app.get("/api/users/orders", async (req, res) => {
+  const token = req.cookies.session;
+  if (!token) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    const orders = await getOrdersForUser(payload.email);
+    return res.status(200).json({ orders });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to fetch orders" });
+  }
 });
 
 // Register drop interest

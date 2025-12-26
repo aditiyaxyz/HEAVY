@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, X, Play, Pause, Radio, ArrowRight, Volume2, VolumeX, User, LogOut } from 'lucide-react';
+import { ShoppingBag, X, Play, Pause, Radio, ArrowRight, Volume2, VolumeX, User, LogOut, ChevronDown, Package, MapPin, Settings } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const LOCAL_TRACK = "/heavy_loop.mp3"; 
@@ -63,25 +63,93 @@ const useAuth = () => {
 
 // --- COMPONENTS ---
 
-const Navbar = ({ cartCount, toggleCart, user, logout }) => (
-  <nav className="fixed top-0 w-full z-50 flex justify-between items-center p-6 bg-black/90 backdrop-blur-md border-b border-gray-900 text-white">
-    <div className="text-2xl font-['Anton'] tracking-wider cursor-pointer text-red-600 hover:tracking-widest transition-all duration-300">HEAVY SHIT.</div>
-    <div className="flex items-center gap-6 font-['Space_Grotesk']">
-      {user && (
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-400">Hey, {user.name}!</span>
-          <button onClick={logout} className="hover:text-red-500 transition-colors" title="Logout">
-            <LogOut size={20} />
+const Navbar = ({ cartCount, toggleCart, user, logout, onOpenAuth, onOpenAccount }) => {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <nav className="fixed top-0 w-full z-50 flex justify-between items-center p-6 bg-black/90 backdrop-blur-md border-b border-gray-900 text-white">
+      <div className="text-2xl font-['Anton'] tracking-wider cursor-pointer text-red-600 hover:tracking-widest transition-all duration-300">HEAVY SHIT.</div>
+      <div className="flex items-center gap-6 font-['Space_Grotesk']">
+        {user ? (
+          <div className="relative" ref={dropdownRef}>
+            <button 
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2 hover:text-red-500 transition-colors"
+            >
+              <User size={20} />
+              <span className="text-sm hidden md:inline">{user.name}</span>
+              <ChevronDown size={16} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            <AnimatePresence>
+              {dropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute right-0 mt-2 w-48 bg-[#111] border border-gray-800 shadow-xl"
+                >
+                  <button 
+                    onClick={() => { setDropdownOpen(false); onOpenAccount('profile'); }}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-900 transition-colors flex items-center gap-3 text-sm"
+                  >
+                    <User size={16} />
+                    Profile
+                  </button>
+                  <button 
+                    onClick={() => { setDropdownOpen(false); onOpenAccount('orders'); }}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-900 transition-colors flex items-center gap-3 text-sm"
+                  >
+                    <Package size={16} />
+                    Order History
+                  </button>
+                  <button 
+                    onClick={() => { setDropdownOpen(false); onOpenAccount('addresses'); }}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-900 transition-colors flex items-center gap-3 text-sm"
+                  >
+                    <MapPin size={16} />
+                    Addresses
+                  </button>
+                  <div className="border-t border-gray-800"></div>
+                  <button 
+                    onClick={() => { setDropdownOpen(false); logout(); }}
+                    className="w-full px-4 py-3 text-left hover:bg-red-900/30 hover:text-red-500 transition-colors flex items-center gap-3 text-sm"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <button 
+            onClick={onOpenAuth}
+            className="text-sm hover:text-red-500 transition-colors flex items-center gap-2"
+          >
+            <User size={20} />
+            <span className="hidden md:inline">Login / Register</span>
           </button>
-        </div>
-      )}
-      <button onClick={toggleCart} className="relative hover:text-red-500 transition-colors">
-        <ShoppingBag size={24} />
-        {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">{cartCount}</span>}
-      </button>
-    </div>
-  </nav>
-);
+        )}
+        <button onClick={toggleCart} className="relative hover:text-red-500 transition-colors">
+          <ShoppingBag size={24} />
+          {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">{cartCount}</span>}
+        </button>
+      </div>
+    </nav>
+  );
+};
 
 const RadioPlayer = () => {
   const [playing, setPlaying] = useState(false);
@@ -362,14 +430,403 @@ const WaitlistModal = ({ isOpen, onClose, user, onRegisterSuccess }) => {
   );
 };
 
+// --- AUTH MODAL (Login/Register) ---
+const AuthModal = ({ isOpen, onClose, onSuccess }) => {
+  const [mode, setMode] = useState('login'); // 'login' or 'register'
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [formData, setFormData] = useState({ 
+    email: '',
+    name: '', 
+    phone: '', 
+    instagram: '' 
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    
+    try {
+      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/users/register';
+      const body = mode === 'login' 
+        ? { email: formData.email }
+        : { name: formData.name, email: formData.email, phone: formData.phone, instagram: formData.instagram };
+      
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body)
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || 'Authentication failed');
+      
+      setSuccess(true);
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+        setSuccess(false);
+        setFormData({ email: '', name: '', phone: '', instagram: '' });
+      }, 1500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({ email: '', name: '', phone: '', instagram: '' });
+    setError('');
+    setSuccess(false);
+  };
+
+  const switchMode = () => {
+    setMode(mode === 'login' ? 'register' : 'login');
+    resetForm();
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
+          <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="bg-[#111] border border-gray-800 p-8 w-full max-w-md relative z-10">
+            <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X size={24} /></button>
+            
+            {success ? (
+              <div className="text-center py-8">
+                <h2 className="text-3xl font-['Anton'] text-green-500 uppercase mb-2">SUCCESS!</h2>
+                <p className="text-gray-400 font-['Space_Grotesk']">
+                  {mode === 'login' ? "Logged in successfully!" : "Account created successfully!"}
+                </p>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-3xl font-['Anton'] text-white uppercase mb-2">
+                  {mode === 'login' ? 'Login' : 'Register'}
+                </h2>
+                <p className="text-gray-500 font-['Space_Grotesk'] text-xs mb-6">
+                  {mode === 'login' ? 'Enter your email to login' : 'Create a new account'}
+                </p>
+                
+                {error && (
+                  <div className="mb-4 p-3 bg-red-900/30 border border-red-600 text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+                
+                <form onSubmit={handleSubmit} className="space-y-4 font-['Space_Grotesk']">
+                  {mode === 'register' && (
+                    <input 
+                      required 
+                      placeholder="FULL NAME" 
+                      value={formData.name}
+                      className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-500" 
+                      onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                    />
+                  )}
+                  <input 
+                    required 
+                    type="email" 
+                    placeholder="EMAIL" 
+                    value={formData.email}
+                    className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-500" 
+                    onChange={(e) => setFormData({...formData, email: e.target.value})} 
+                  />
+                  {mode === 'register' && (
+                    <>
+                      <input 
+                        required 
+                        placeholder="PHONE" 
+                        value={formData.phone}
+                        className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-500" 
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})} 
+                      />
+                      <input 
+                        placeholder="INSTAGRAM (OPTIONAL)" 
+                        value={formData.instagram}
+                        className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-500" 
+                        onChange={(e) => setFormData({...formData, instagram: e.target.value})} 
+                      />
+                    </>
+                  )}
+                  <button 
+                    disabled={loading} 
+                    className="w-full bg-red-600 text-white font-['Anton'] py-4 text-xl hover:bg-white hover:text-black transition-colors uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? "PROCESSING..." : mode === 'login' ? "LOGIN" : "CREATE ACCOUNT"}
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={switchMode}
+                    className="w-full text-center text-sm text-gray-400 hover:text-white transition-colors"
+                  >
+                    {mode === 'login' ? "Don't have an account? Register" : "Already have an account? Login"}
+                  </button>
+                </form>
+              </>
+            )}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// --- ACCOUNT DASHBOARD ---
+const AccountDashboard = ({ isOpen, onClose, user, initialTab = 'profile' }) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
+    instagram: user?.instagram || ''
+  });
+  const [saveMessage, setSaveMessage] = useState('');
+
+  useEffect(() => {
+    if (isOpen && user) {
+      setProfileData({
+        name: user.name || '',
+        phone: user.phone || '',
+        instagram: user.instagram || ''
+      });
+      if (activeTab === 'orders') {
+        fetchOrders();
+      }
+    }
+  }, [isOpen, user, activeTab]);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/orders`, {
+        credentials: 'include'
+      });
+      const data = await res.json();
+      setOrders(data.orders || []);
+    } catch (err) {
+      console.error('Failed to fetch orders:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setSaveMessage('');
+    
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(profileData)
+      });
+      
+      if (!res.ok) throw new Error('Failed to update profile');
+      
+      setSaveMessage('Profile updated successfully!');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (err) {
+      setSaveMessage('Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
+        <motion.div 
+          initial={{ y: 100, opacity: 0 }} 
+          animate={{ y: 0, opacity: 1 }} 
+          exit={{ y: 100, opacity: 0 }} 
+          className="bg-[#111] border border-gray-800 w-full max-w-4xl max-h-[80vh] overflow-hidden relative z-10 flex flex-col"
+        >
+          <div className="flex justify-between items-center p-6 border-b border-gray-800">
+            <h2 className="text-2xl font-['Anton'] text-white uppercase">My Account</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={24} /></button>
+          </div>
+
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar */}
+            <div className="w-48 border-r border-gray-800 p-4 space-y-2">
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 transition-colors ${
+                  activeTab === 'profile' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
+                }`}
+              >
+                <User size={16} />
+                Profile
+              </button>
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 transition-colors ${
+                  activeTab === 'orders' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
+                }`}
+              >
+                <Package size={16} />
+                Orders
+              </button>
+              <button
+                onClick={() => setActiveTab('addresses')}
+                className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 transition-colors ${
+                  activeTab === 'addresses' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
+                }`}
+              >
+                <MapPin size={16} />
+                Addresses
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 p-6 overflow-y-auto">
+              {activeTab === 'profile' && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-['Anton'] text-white uppercase">Profile Information</h3>
+                  <form onSubmit={handleProfileUpdate} className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Name</label>
+                      <input
+                        value={profileData.name}
+                        onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                        className="w-full bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Email</label>
+                      <input
+                        value={user?.email || ''}
+                        disabled
+                        className="w-full bg-gray-900 border border-gray-800 p-3 text-gray-500 cursor-not-allowed"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Phone</label>
+                      <input
+                        value={profileData.phone}
+                        onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                        className="w-full bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2 uppercase tracking-wider">Instagram</label>
+                      <input
+                        value={profileData.instagram}
+                        onChange={(e) => setProfileData({...profileData, instagram: e.target.value})}
+                        className="w-full bg-black border border-gray-800 p-3 text-white focus:border-red-600 outline-none"
+                        placeholder="@username"
+                      />
+                    </div>
+                    {saveMessage && (
+                      <div className={`p-3 ${saveMessage.includes('success') ? 'bg-green-900/30 border-green-600 text-green-400' : 'bg-red-900/30 border-red-600 text-red-400'} border text-sm`}>
+                        {saveMessage}
+                      </div>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="bg-red-600 text-white px-8 py-3 font-['Anton'] uppercase tracking-wider hover:bg-white hover:text-black transition-colors disabled:opacity-50"
+                    >
+                      {loading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {activeTab === 'orders' && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-['Anton'] text-white uppercase">Order History</h3>
+                  {loading ? (
+                    <p className="text-gray-400">Loading orders...</p>
+                  ) : orders.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package size={48} className="mx-auto mb-4 text-gray-600" />
+                      <p className="text-gray-400">No orders yet</p>
+                      <p className="text-sm text-gray-600 mt-2">Your order history will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {orders.map((order) => (
+                        <div key={order.id} className="border border-gray-800 p-4 hover:border-gray-700 transition-colors">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <p className="font-bold text-white">Order #{order.id.slice(0, 8)}</p>
+                              <p className="text-sm text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            <span className={`px-3 py-1 text-xs uppercase font-bold ${
+                              order.status === 'delivered' ? 'bg-green-900/30 text-green-400' :
+                              order.status === 'shipped' ? 'bg-blue-900/30 text-blue-400' :
+                              'bg-yellow-900/30 text-yellow-400'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {order.items?.map((item, idx) => (
+                              <div key={idx} className="text-sm text-gray-400">
+                                {item.name} - ${item.price}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-3 pt-3 border-t border-gray-800 flex justify-between">
+                            <span className="text-gray-400">Total</span>
+                            <span className="font-bold text-white">${order.total}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'addresses' && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-['Anton'] text-white uppercase">Saved Addresses</h3>
+                  <div className="text-center py-12">
+                    <MapPin size={48} className="mx-auto mb-4 text-gray-600" />
+                    <p className="text-gray-400">No saved addresses</p>
+                    <p className="text-sm text-gray-600 mt-2">Add an address during checkout</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
+
 // --- MAIN APP ---
 
 export default function HeavyShitApp() {
   const [cartOpen, setCartOpen] = useState(false);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [accountTab, setAccountTab] = useState('profile');
   const [cart, setCart] = useState([]);
   const [hasEntered, setHasEntered] = useState(false);
   const { user, loading, logout, checkAuth } = useAuth();
+
+  const handleOpenAccount = (tab) => {
+    setAccountTab(tab);
+    setAccountModalOpen(true);
+  };
 
   const enterSite = () => setHasEntered(true);
   
@@ -387,8 +844,26 @@ export default function HeavyShitApp() {
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white overflow-x-hidden font-['Space_Grotesk']">
-      <Navbar cartCount={cart.length} toggleCart={() => setCartOpen(!cartOpen)} user={user} logout={logout} />
+      <Navbar 
+        cartCount={cart.length} 
+        toggleCart={() => setCartOpen(!cartOpen)} 
+        user={user} 
+        logout={logout} 
+        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAccount={handleOpenAccount}
+      />
       <RadioPlayer />
+      <AuthModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+        onSuccess={checkAuth}
+      />
+      <AccountDashboard
+        isOpen={accountModalOpen}
+        onClose={() => setAccountModalOpen(false)}
+        user={user}
+        initialTab={accountTab}
+      />
       <WaitlistModal 
         isOpen={waitlistOpen} 
         onClose={() => setWaitlistOpen(false)} 
