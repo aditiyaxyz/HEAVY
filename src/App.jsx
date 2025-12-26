@@ -5,7 +5,7 @@ import { ShoppingBag, X, Play, Pause, Radio, ArrowRight, Volume2, VolumeX, User,
 // --- CONFIGURATION ---
 const LOCAL_TRACK = "/heavy_loop.mp3"; 
 const FALLBACK_TRACK = "https://cdn.pixabay.com/download/audio/2021/09/28/audio_7a0c4a3da1.mp3?filename=loop-ambient-116528.mp3";
-const API_BASE_URL = "http://localhost:3001";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 const NEXT_DROP = {
   name: "PHANTOM BOMBER",
@@ -244,12 +244,22 @@ const WaitlistModal = ({ isOpen, onClose, user, onRegisterSuccess }) => {
         if (!res.ok) throw new Error(data.error || 'Registration failed');
         
         // After successful registration, automatically register for the drop
-        await fetch(`${API_BASE_URL}/api/users/register-drop`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ details: NEXT_DROP.name })
-        });
+        try {
+          const dropRes = await fetch(`${API_BASE_URL}/api/users/register-drop`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ details: NEXT_DROP.name })
+          });
+          
+          if (!dropRes.ok) {
+            console.error('Failed to register drop interest automatically');
+            // Don't fail the registration, just log the error
+          }
+        } catch (dropErr) {
+          console.error('Error registering drop interest:', dropErr);
+          // Don't fail the registration, just log the error
+        }
         
         setSuccess(true);
         setTimeout(() => {

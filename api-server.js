@@ -3,15 +3,24 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
+import fs from "fs/promises";
+import path from "path";
 import { createUser, findUserByEmail, getAllUsers } from "./lib/users.js";
 
 dotenv.config({ path: ".env.local" });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || "your_long_random_secret_here";
+const JWT_SECRET = process.env.JWT_SECRET;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+// Fail fast if JWT_SECRET is not set
+if (!JWT_SECRET) {
+  console.error("FATAL ERROR: JWT_SECRET environment variable is not set!");
+  process.exit(1);
+}
+
+app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -83,8 +92,6 @@ app.post("/api/users/register-drop", async (req, res) => {
     const { details } = req.body;
     
     // Store the drop registration in a simple JSON file
-    const fs = await import("fs/promises");
-    const path = await import("path");
     const dataDir = path.join(process.cwd(), "data");
     const dropsFile = path.join(dataDir, "drops.json");
     
@@ -118,8 +125,6 @@ app.post("/api/users/register-drop", async (req, res) => {
 // Admin: Export drop registrations (simple CSV)
 app.get("/api/admin/export-drops", async (req, res) => {
   try {
-    const fs = await import("fs/promises");
-    const path = await import("path");
     const dropsFile = path.join(process.cwd(), "data", "drops.json");
     
     let drops = [];
@@ -147,8 +152,6 @@ app.get("/api/admin/export-drops", async (req, res) => {
 // Admin: Get all drop registrations as JSON
 app.get("/api/admin/drops", async (req, res) => {
   try {
-    const fs = await import("fs/promises");
-    const path = await import("path");
     const dropsFile = path.join(process.cwd(), "data", "drops.json");
     
     let drops = [];
