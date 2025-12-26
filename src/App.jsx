@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, X, Play, Pause, Radio, ArrowRight, Volume2, VolumeX } from 'lucide-react';
+import { ShoppingBag, X, Play, Pause, Radio, ArrowRight, Volume2, VolumeX, User, LogOut } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const LOCAL_TRACK = "/heavy_loop.mp3"; 
 const FALLBACK_TRACK = "https://cdn.pixabay.com/download/audio/2021/09/28/audio_7a0c4a3da1.mp3?filename=loop-ambient-116528.mp3";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 const NEXT_DROP = {
   name: "PHANTOM BOMBER",
@@ -21,12 +22,59 @@ const INITIAL_PRODUCTS = [
   { id: 4, name: "METAL TRUCKER", price: 35, tag: "ACCESSORY", image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?q=80&w=800&auto=format&fit=crop", stock: 12, status: "AVAILABLE" }
 ];
 
+// --- AUTH HOOK ---
+const useAuth = () => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        credentials: 'include'
+      });
+      const data = await res.json();
+      setUser(data.user);
+    } catch (err) {
+      console.error('Auth check failed:', err);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      setUser(null);
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
+
+  return { user, loading, logout, checkAuth };
+};
+
 // --- COMPONENTS ---
 
-const Navbar = ({ cartCount, toggleCart }) => (
+const Navbar = ({ cartCount, toggleCart, user, logout }) => (
   <nav className="fixed top-0 w-full z-50 flex justify-between items-center p-6 bg-black/90 backdrop-blur-md border-b border-gray-900 text-white">
     <div className="text-2xl font-['Anton'] tracking-wider cursor-pointer text-red-600 hover:tracking-widest transition-all duration-300">HEAVY SHIT.</div>
     <div className="flex items-center gap-6 font-['Space_Grotesk']">
+      {user && (
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-400">Hey, {user.name}!</span>
+          <button onClick={logout} className="hover:text-red-500 transition-colors" title="Logout">
+            <LogOut size={20} />
+          </button>
+        </div>
+      )}
       <button onClick={toggleCart} className="relative hover:text-red-500 transition-colors">
         <ShoppingBag size={24} />
         {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">{cartCount}</span>}
@@ -141,20 +189,90 @@ const RadioPlayer = () => {
   );
 };
 
-const WaitlistModal = ({ isOpen, onClose }) => {
+const WaitlistModal = ({ isOpen, onClose, user, onRegisterSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ Name: '', Email: '' });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    email: '', 
+    phone: '', 
+    instagram: '' 
+  });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      localStorage.setItem('heavy_waitlist', JSON.stringify(formData));
-      setLoading(false);
-      alert("YOU ARE REGISTERED.");
-      onClose();
-    }, 1000);
+    setError('');
+    
+    if (user) {
+      // User is logged in - register for drop
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/users/register-drop`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ details: NEXT_DROP.name })
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error || 'Failed to register');
+        
+        setSuccess(true);
+        setTimeout(() => {
+          onClose();
+          setSuccess(false);
+        }, 2000);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // User not logged in - register account first
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/users/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(formData)
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error || 'Registration failed');
+        
+        // After successful registration, automatically register for the drop
+        try {
+          const dropRes = await fetch(`${API_BASE_URL}/api/users/register-drop`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ details: NEXT_DROP.name })
+          });
+          
+          if (!dropRes.ok) {
+            console.error('Failed to register drop interest automatically');
+            // Don't fail the registration, just log the error
+          }
+        } catch (dropErr) {
+          console.error('Error registering drop interest:', dropErr);
+          // Don't fail the registration, just log the error
+        }
+        
+        setSuccess(true);
+        setTimeout(() => {
+          onRegisterSuccess();
+          onClose();
+          setSuccess(false);
+        }, 2000);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   return (
@@ -164,15 +282,79 @@ const WaitlistModal = ({ isOpen, onClose }) => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
           <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="bg-[#111] border border-gray-800 p-8 w-full max-w-md relative z-10">
             <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X size={24} /></button>
-            <h2 className="text-3xl font-['Anton'] text-white uppercase mb-2">Secure Your Spot</h2>
-            <p className="text-gray-500 font-['Space_Grotesk'] text-xs mb-6">BE THE FIRST TO KNOW WHEN WE DROP.</p>
-            <form onSubmit={handleSubmit} className="space-y-4 font-['Space_Grotesk']">
-              <input required placeholder="FULL NAME" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-500" onChange={(e)=>setFormData({...formData, Name: e.target.value})} />
-              <input required type="email" placeholder="EMAIL" className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest" onChange={(e)=>setFormData({...formData, Email: e.target.value})} />
-              <button disabled={loading} className="w-full bg-red-600 text-white font-['Anton'] py-4 text-xl hover:bg-white hover:text-black transition-colors uppercase tracking-widest">
-                {loading ? "REGISTERING..." : "CONFIRM INTEREST"}
-              </button>
-            </form>
+            
+            {success ? (
+              <div className="text-center py-8">
+                <h2 className="text-3xl font-['Anton'] text-green-500 uppercase mb-2">SUCCESS!</h2>
+                <p className="text-gray-400 font-['Space_Grotesk']">
+                  {user ? "You're registered for the drop!" : "Account created and registered for drop!"}
+                </p>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-3xl font-['Anton'] text-white uppercase mb-2">
+                  {user ? 'Confirm Drop Interest' : 'Register Your Interest'}
+                </h2>
+                <p className="text-gray-500 font-['Space_Grotesk'] text-xs mb-6">
+                  {user ? `Register for ${NEXT_DROP.name}` : 'Create account & register for drop'}
+                </p>
+                
+                {error && (
+                  <div className="mb-4 p-3 bg-red-900/30 border border-red-600 text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+                
+                <form onSubmit={handleSubmit} className="space-y-4 font-['Space_Grotesk']">
+                  {user ? (
+                    <div className="space-y-3 text-gray-400 text-sm">
+                      <p>Logged in as: <span className="text-white">{user.email}</span></p>
+                      <p>Product: <span className="text-white">{NEXT_DROP.name}</span></p>
+                      <p className="text-xs text-gray-500">
+                        Your interest will be recorded with your account details.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <input 
+                        required 
+                        placeholder="FULL NAME" 
+                        value={formData.name}
+                        className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-500" 
+                        onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                      />
+                      <input 
+                        required 
+                        type="email" 
+                        placeholder="EMAIL" 
+                        value={formData.email}
+                        className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-500" 
+                        onChange={(e) => setFormData({...formData, email: e.target.value})} 
+                      />
+                      <input 
+                        required 
+                        placeholder="PHONE" 
+                        value={formData.phone}
+                        className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-500" 
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})} 
+                      />
+                      <input 
+                        placeholder="INSTAGRAM (OPTIONAL)" 
+                        value={formData.instagram}
+                        className="w-full bg-black border border-gray-800 p-4 text-white focus:border-red-600 outline-none uppercase tracking-widest placeholder:text-gray-500" 
+                        onChange={(e) => setFormData({...formData, instagram: e.target.value})} 
+                      />
+                    </>
+                  )}
+                  <button 
+                    disabled={loading} 
+                    className="w-full bg-red-600 text-white font-['Anton'] py-4 text-xl hover:bg-white hover:text-black transition-colors uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? "PROCESSING..." : "CONFIRM INTEREST"}
+                  </button>
+                </form>
+              </>
+            )}
           </motion.div>
         </div>
       )}
@@ -187,6 +369,7 @@ export default function HeavyShitApp() {
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [cart, setCart] = useState([]);
   const [hasEntered, setHasEntered] = useState(false);
+  const { user, loading, logout, checkAuth } = useAuth();
 
   const enterSite = () => setHasEntered(true);
   
@@ -204,9 +387,14 @@ export default function HeavyShitApp() {
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white overflow-x-hidden font-['Space_Grotesk']">
-      <Navbar cartCount={cart.length} toggleCart={() => setCartOpen(!cartOpen)} />
+      <Navbar cartCount={cart.length} toggleCart={() => setCartOpen(!cartOpen)} user={user} logout={logout} />
       <RadioPlayer />
-      <WaitlistModal isOpen={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
+      <WaitlistModal 
+        isOpen={waitlistOpen} 
+        onClose={() => setWaitlistOpen(false)} 
+        user={user}
+        onRegisterSuccess={checkAuth}
+      />
 
       {/* --- CART SIDEBAR --- */}
       <AnimatePresence>
