@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import fs from "fs/promises";
 import path from "path";
+import rateLimit from "express-rate-limit";
 import { createUser, findUserByEmail, getAllUsers } from "./lib/users.js";
 
 dotenv.config({ path: ".env.local" });
@@ -24,8 +25,24 @@ app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+// Rate limiting middleware
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later.",
+});
+
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // limit each IP to 20 requests per windowMs
+  message: "Too many requests from this IP, please try again later.",
+});
+
+// Apply rate limiting to all routes
+app.use(authLimiter);
+
 // Register endpoint
-app.post("/api/users/register", async (req, res) => {
+app.post("/api/users/register", strictLimiter, async (req, res) => {
   try {
     const { name, email, phone, instagram } = req.body;
     
@@ -75,7 +92,7 @@ app.post("/api/auth/logout", (req, res) => {
 });
 
 // Register drop interest
-app.post("/api/users/register-drop", async (req, res) => {
+app.post("/api/users/register-drop", strictLimiter, async (req, res) => {
   const token = req.cookies.session;
   if (!token) {
     return res.status(401).json({ error: "Not authenticated" });
