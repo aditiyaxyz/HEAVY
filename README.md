@@ -11,8 +11,11 @@ npm install
 
 ### Environment Setup
 1. Copy `.env.example` to `.env.local`
-2. Generate a secure JWT_SECRET (minimum 32 characters)
-3. Update configuration as needed
+2. Generate a secure JWT_SECRET:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+3. Update `.env.local` with the generated secret and other configuration as needed
 
 ### Running the Application
 
